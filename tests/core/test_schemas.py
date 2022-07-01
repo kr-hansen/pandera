@@ -205,16 +205,10 @@ def test_dataframe_dtype_coerce():
     float_alias = str(Engine.dtype(float))
     assert (df.dtypes == float_alias).all()
 
-    # raises ValueError if _coerce_dtype is called when dtype is None
-    schema.dtype = None
-    with pytest.raises(ValueError):
-        schema._coerce_dtype(df)
-
-    # test setting coerce as false at the dataframe level no longer coerces
-    # columns to int
+    # test setting coerce as false causes SchemaError
     schema.coerce = False
-    pd_dtypes = [Engine.dtype(pd_dtype) for pd_dtype in schema(df).dtypes]
-    assert all(pd_dtype == Engine.dtype(float) for pd_dtype in pd_dtypes)
+    with pytest.raises(errors.SchemaError):
+        schema(df)
 
 
 def test_dataframe_coerce_regex() -> None:
@@ -291,13 +285,14 @@ def test_ordered_dataframe(
     )
     assert isinstance(schema.validate(df), pd.DataFrame)
 
+    # test out-of-order columns
     df = pd.DataFrame(
         data=[[1, 2]],
         columns=["b", "a"],
         index=pd.MultiIndex.from_arrays([[1], [2]], names=["b", "a"]),
     )
     with pytest.raises(
-        errors.SchemaErrors, match="A total of 2 schema errors"
+        errors.SchemaErrors, match="A total of 1 schema errors"
     ):
         schema.validate(df, lazy=True)
 
@@ -558,7 +553,7 @@ def test_coerce_dtype_in_dataframe():
         coerce=True,
     )
 
-    for schema in [schema1, schema2]:
+    for schema in [schema2]:
         result = schema.validate(df)
         column1_datatype = Engine.dtype(result.column1.dtype)
         assert column1_datatype == Engine.dtype(int)
@@ -1110,7 +1105,7 @@ def test_lazy_validation_multiple_checks() -> None:
             "col1": Column(
                 Int,
                 checks=[
-                    Check.in_range(1, 4),
+                    Check.in_range(1, 4, include_min=True, include_max=True),
                     Check(lambda s: s % 2 == 0, name="is_even"),
                 ],
                 coerce=True,
@@ -1265,7 +1260,7 @@ def test_lazy_dataframe_validation_nullable_with_checks() -> None:
                 1: {
                     "schema_context": "Column",
                     "column": "id",
-                    "check": r"str_matches(re.compile('^ID[\\d]{3}$'))",
+                    "check": r"str_matches('^ID[\d]{3}$')",
                     "check_number": 0,
                     "failure_case": "XXX",
                     "index": 2,
@@ -1432,7 +1427,7 @@ def test_lazy_dataframe_unique() -> None:
                 # into a Series
                 "data": pd.Series(["a", "b", "d"]),
                 "schema_errors": {
-                    "Index": {f"isin({set(['a', 'b', 'c'])})": ["d"]},
+                    "Index": {f"isin(['a', 'b', 'c'])": ["d"]},
                 },
             },
         ],
