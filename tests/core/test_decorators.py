@@ -694,7 +694,7 @@ def test_check_types_with_literal_type(arg_examples):
         ) -> DataFrame[OutSchema]:
             return df.assign(b=100)
 
-        df = pd.DataFrame({"a": [1]})
+        df = pd.DataFrame({"a": [1]}, index=["a"])
         invalid_df = pd.DataFrame()
 
         transform_with_literal(df, example)

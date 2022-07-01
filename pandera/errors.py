@@ -260,7 +260,7 @@ class SchemaErrors(ReducedPickleExceptionBase):
                 check_failure_cases.append(failure_cases[column_order])
 
         # NOTE: this is a hack to support pyspark.pandas and modin
-        concat_fn = pd.concat
+        concat_fn = pd.concat  # type: ignore
         if any(
             type(x).__module__.startswith("pyspark.pandas")
             for x in check_failure_cases
@@ -268,7 +268,7 @@ class SchemaErrors(ReducedPickleExceptionBase):
             # pylint: disable=import-outside-toplevel
             import pyspark.pandas as ps
 
-            concat_fn = ps.concat
+            concat_fn = ps.concat  # type: ignore
             check_failure_cases = [
                 x if isinstance(x, ps.DataFrame) else ps.DataFrame(x)
                 for x in check_failure_cases
@@ -280,7 +280,7 @@ class SchemaErrors(ReducedPickleExceptionBase):
             # pylint: disable=import-outside-toplevel
             import modin.pandas as mpd
 
-            concat_fn = mpd.concat
+            concat_fn = mpd.concat  # type: ignore
             check_failure_cases = [
                 x if isinstance(x, mpd.DataFrame) else mpd.DataFrame(x)
                 for x in check_failure_cases
